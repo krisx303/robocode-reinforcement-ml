@@ -1,0 +1,15 @@
+{
+  "name": "QLearningBot",
+  "version": "0.1",
+  "authors": [
+    "Anna Nowacka",
+    "Krzysztof Usnarski"
+  ],
+  "description": "Bot that learns to play a game using Q-learning algorithm.",
+  "homepage": "",
+  "countryCodes": [
+    "pl"
+  ],
+  "platform": "JVM",
+  "programmingLang": "Java 21"
+}
