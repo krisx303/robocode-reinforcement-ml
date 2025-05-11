@@ -1,1 +1,2 @@
-java -cp ../lib/* QLearningBot.java >nul
+javac -cp "../lib/*" -d ../out bot/*.java
+java -cp "../out;../lib/*" bot.QLearningBot
