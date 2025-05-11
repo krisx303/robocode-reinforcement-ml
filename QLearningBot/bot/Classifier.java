@@ -17,17 +17,12 @@ public class Classifier {
     }
 
     private Categories.AngleCategory categorizeAngle(double angle) {
-        System.out.println("Relative normalized angle: " + angle);
-
         if (angle >= -5 && angle <= 5) return Categories.AngleCategory.FRONT_TO_SHOT;
         if (angle > -45 && angle < 45) return Categories.AngleCategory.FRONT;
         if (angle >= 45 && angle <= 135) return Categories.AngleCategory.LEFT;
         if (angle <= -45 && angle >= -135) return Categories.AngleCategory.RIGHT;
         return Categories.AngleCategory.BACK;
     }
-
-
-
 
     private Categories.SpeedCategory categorizeSpeed(double speed) {
         if (speed < 1) return Categories.SpeedCategory.STILL;
