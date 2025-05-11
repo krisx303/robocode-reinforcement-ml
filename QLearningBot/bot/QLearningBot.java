@@ -20,16 +20,14 @@ public class QLearningBot extends Bot {
     private double nearestEnemyDistance = Double.MAX_VALUE;
     private double nearestEnemyX, nearestEnemyY;
 
-    private final Map<GameStateActionPair, Double> qTable = new HashMap<>();
     private final Map<Integer, GameStateActionPair> activeBullets = new HashMap<>();
-    private final double learningRate = 0.1;
-    private final double discountFactor = 0.9;
     private double epsilon = 0.7;
     private final Random random = new Random();
     private GameState previousState, currentState;
     private Action previousAction, currentAction;
     private double currentReward = 0.0;
     private final Classifier classifier;
+    private final KnowledgeBase knowledgeBase;
 
     public static void main(String[] args) {
         new QLearningBot().start();
@@ -38,6 +36,7 @@ public class QLearningBot extends Bot {
     QLearningBot() {
         super(BotInfo.fromFile("QLearningBot.json"));
         this.classifier = new Classifier();
+        this.knowledgeBase = new QLearningKnowledgeBase(0.3, 0.9);
     }
 
     // Called when a new round is started -> initialize and do some movement
@@ -72,7 +71,7 @@ public class QLearningBot extends Bot {
             if (previousState != null && previousAction != null) {
                 double reward = getReward();
                 System.out.println("Current state: " + currentState + ", Action: " + currentAction + ", Reward: " + reward);
-                updateQTable(previousState, previousAction, currentState, reward);
+                knowledgeBase.updateKnowledge(previousState, previousAction, currentState, reward);
             }
 
             previousState = currentState;
@@ -124,7 +123,7 @@ public class QLearningBot extends Bot {
         if (pair != null) {
             GameState state = pair.state();
             Action action = pair.action();
-            updateQTable(state, action, currentState, 1);
+            knowledgeBase.updateKnowledge(state, action, currentState, 1);
             activeBullets.remove(bulletId);
         }
         System.out.println("Bullet hit: " + bulletHitBotEvent.getVictimId() + ", " + getMyId());
@@ -138,7 +137,7 @@ public class QLearningBot extends Bot {
         if (pair != null) {
             GameState state = pair.state();
             Action action = pair.action();
-            updateQTable(state, action, currentState, -0.1);
+            knowledgeBase.updateKnowledge(state, action, currentState, -0.1);
             activeBullets.remove(bulletId);
         }
     }
@@ -163,47 +162,16 @@ public class QLearningBot extends Bot {
         currentReward += 5;
     }
 
-    private void updateQTable(GameState previousState, Action previousAction, GameState currentState, double reward) {
-        double oldQValue = qTable.getOrDefault(new GameStateActionPair(previousState, previousAction), 0.0);
-        double maxQValueNextState = 0;
-
-        // Znajdź maksymalną Q-wartość dla następnego stanu (currentState)
-        for (Action action : Action.values()) {
-            maxQValueNextState = Math.max(maxQValueNextState,
-                    qTable.getOrDefault(new GameStateActionPair(currentState, action), 0.0));
-        }
-
-        // Aktualizuj Q-wartość zgodnie z algorytmem Q-learning
-        double newQValue = oldQValue + learningRate * (reward + discountFactor * maxQValueNextState - oldQValue);
-        qTable.put(new GameStateActionPair(previousState, previousAction), newQValue);
-    }
-
     private Action selectAction(GameState state) {
         boolean isExploring = random.nextDouble() < epsilon;
-        System.out.println("Is exploring: " + isExploring + ", Epsilon: " + epsilon);
-        System.out.println("Qtable full: " + qTable.size() + " / 90");
         if (isExploring) {
             // Explore: choose a random action
             epsilon = Math.max(0.05, epsilon - 0.001);
             return Action.random();
         } else {
             // Exploit: choose the action with the highest Q-value for the current state
-            return getBestAction(state);
+            return knowledgeBase.getBestAction(state);
         }
-    }
-
-    private Action getBestAction(GameState state) {
-        double bestQValue = Double.NEGATIVE_INFINITY;
-        Action bestAction = null;
-
-        for (Action action : Action.values()) {
-            double qValue = qTable.getOrDefault(new GameStateActionPair(state, action), 0.0);
-            if (qValue > bestQValue) {
-                bestQValue = qValue;
-                bestAction = action;
-            }
-        }
-        return bestAction != null ? bestAction : Action.random(); // If no Q-values are present, choose randomly
     }
 
     private void executeAction(Action action) {

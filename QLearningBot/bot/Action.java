@@ -2,7 +2,7 @@ package bot;
 
 import java.util.Random;
 
-enum Action {
+public enum Action {
     MOVE_FORWARD,
     MOVE_BACKWARD,
     TURN_LEFT,
