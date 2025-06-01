@@ -70,6 +70,7 @@ public class QLearningKnowledgeBase implements KnowledgeBase {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             Object obj = ois.readObject();
             if (obj instanceof Map) {
+                System.out.println("Loaded Q-table (" + ((Map<?, ?>) obj).size() + " entries) from " + QTABLE_FILENAME);
                 return (Map<GameStateActionPair, Double>) obj;
             } else {
                 System.err.println("Q-table file is invalid, starting fresh.");

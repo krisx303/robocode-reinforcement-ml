@@ -153,7 +153,9 @@ public class QLearningBot extends Bot {
         logger.log(getRoundNumber(), epsilon, cumulativeReward, won, ((QLearningKnowledgeBase) knowledgeBase).getQTableSize());
         cumulativeReward = 0.0;
         activeBullets.clear();
-        knowledgeBase.saveQTable();
+        if (e.getRoundNumber() % 10 == 0) {
+            knowledgeBase.saveQTable();
+        }
     }
 
     @Override
