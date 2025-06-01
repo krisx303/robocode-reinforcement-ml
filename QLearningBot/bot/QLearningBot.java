@@ -27,7 +27,10 @@ public class QLearningBot extends Bot {
     private Action previousAction, currentAction;
     private double currentReward = 0.0;
     private final Classifier classifier;
-    private final KnowledgeBase knowledgeBase;
+    private final QLearningKnowledgeBase knowledgeBase;
+
+    private final TrainingLogger logger = new TrainingLogger("training_data.csv");
+    private double cumulativeReward = 0.0;
 
     public static void main(String[] args) {
         new QLearningBot().start();
@@ -70,7 +73,7 @@ public class QLearningBot extends Bot {
             // Update Q-table
             if (previousState != null && previousAction != null) {
                 double reward = getReward();
-                System.out.println("Current state: " + currentState + ", Action: " + currentAction + ", Reward: " + reward);
+//                System.out.println("Current state: " + currentState + ", Action: " + currentAction + ", Reward: " + reward);
                 knowledgeBase.updateKnowledge(previousState, previousAction, currentState, reward);
             }
 
@@ -81,6 +84,7 @@ public class QLearningBot extends Bot {
 
     private double getReward() {
         double reward = currentReward == 0.0 ? -0.001 : currentReward;
+        cumulativeReward += reward;
         currentReward = 0.0; // Reset reward for the next round
         return reward;
     }
@@ -106,13 +110,13 @@ public class QLearningBot extends Bot {
         GameState state = currentState == null ? previousState : currentState;
         Action action = currentAction == null ? previousAction : currentAction;
         activeBullets.put(bulletId, new GameStateActionPair(state, action));
-        System.out.println("Bullet fired: " + bulletId);
+//        System.out.println("Bullet fired: " + bulletId);
     }
 
     @Override
     public void onHitWall(HitWallEvent e) {
         currentReward -= 0.1;
-        System.out.println("Hit wall");
+//        System.out.println("Hit wall");
     }
 
     @Override
@@ -126,7 +130,7 @@ public class QLearningBot extends Bot {
             knowledgeBase.updateKnowledge(state, action, currentState, 1);
             activeBullets.remove(bulletId);
         }
-        System.out.println("Bullet hit: " + bulletHitBotEvent.getVictimId() + ", " + getMyId());
+//        System.out.println("Bullet hit: " + bulletHitBotEvent.getVictimId() + ", " + getMyId());
     }
 
     @Override
@@ -144,21 +148,25 @@ public class QLearningBot extends Bot {
 
     @Override
     public void onRoundEnded(RoundEndedEvent e) {
-        System.out.println("Round ended: " + e.getResults().getFirstPlaces());
+//        System.out.println("Round ended: " + e.getResults().getFirstPlaces());
+        boolean won = e.getResults().getFirstPlaces() > 0;
+        logger.log(getRoundNumber(), epsilon, cumulativeReward, won, ((QLearningKnowledgeBase) knowledgeBase).getQTableSize());
+        cumulativeReward = 0.0;
         activeBullets.clear();
+        knowledgeBase.saveQTable();
     }
 
     @Override
     public void onDeath(DeathEvent deathEvent) {
         super.onDeath(deathEvent);
         currentReward -= 5;
-        System.out.println("Died");
+//        System.out.println("Died");
     }
 
     @Override
     public void onWonRound(WonRoundEvent wonRoundEvent) {
         super.onWonRound(wonRoundEvent);
-        System.out.println("Won round!");
+//        System.out.println("Won round!");
         currentReward += 5;
     }
 
