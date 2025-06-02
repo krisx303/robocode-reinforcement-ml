@@ -2,9 +2,12 @@ package bot;
 
 public class Classifier {
 
-    public GameState observeGameState(double nearestEnemyDistance, double relativeBearingToNearestEnemy) {
-        Categories.DistanceCategory enemyDistCat = categorizeDistance(nearestEnemyDistance);
+    public GameState observeGameState(double nearestEnemyDistance, double relativeBearingToNearestEnemy, int ticksSinceLastScan){
+        if (ticksSinceLastScan > 20) {
+            return new GameState(Categories.DistanceCategory.UNKNOWN, Categories.AngleCategory.UNKNOWN);
+        }
 
+        Categories.DistanceCategory enemyDistCat = categorizeDistance(nearestEnemyDistance);
         Categories.AngleCategory angleCat = categorizeAngle(relativeBearingToNearestEnemy);
 
         return new GameState(enemyDistCat, angleCat);

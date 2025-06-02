@@ -7,7 +7,8 @@ public enum Action {
     MOVE_BACKWARD,
     TURN_LEFT,
     TURN_RIGHT,
-    FIRE_MEDIUM;
+    FIRE_MEDIUM,
+    NOTHING;
 
     public static Action random() {
         Action[] values = values();
