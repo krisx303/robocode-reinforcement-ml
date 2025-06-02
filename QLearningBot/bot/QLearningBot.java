@@ -149,24 +149,15 @@ public class QLearningBot extends Bot {
     public void onRoundEnded(RoundEndedEvent e) {
         scanTurn = -1;
         activeBullets.clear();
-        boolean won = e.getResults().getFirstPlaces() > 0;
+        boolean won = e.getResults().getFirstPlaces() == getMyId();
+        if (won) {
+            roundResults[getRoundNumber()] += 20;
+        }
         logger.log(getRoundNumber(), epsilon, roundResults[getRoundNumber()], won, knowledgeBase.getQTableSize());
+
         if (e.getRoundNumber() % 10 == 0) {
             knowledgeBase.saveQTable();
         }
-    }
-
-    @Override
-    public void onDeath(DeathEvent deathEvent) {
-        super.onDeath(deathEvent);
-        roundResults[getRoundNumber()] -= 5;
-    }
-
-    @Override
-    public void onWonRound(WonRoundEvent wonRoundEvent) {
-        super.onWonRound(wonRoundEvent);
-        System.out.println("Won round!");
-        roundResults[getRoundNumber()] += 20;
     }
 
     private Action selectAction(GameState state) {
