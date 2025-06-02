@@ -3,7 +3,7 @@ package bot;
 public class Classifier {
 
     public GameState observeGameState(double nearestEnemyDistance, double relativeBearingToNearestEnemy, int ticksSinceLastScan){
-        if (ticksSinceLastScan > 20) {
+        if (ticksSinceLastScan > 300) {
             return new GameState(Categories.DistanceCategory.UNKNOWN, Categories.AngleCategory.UNKNOWN);
         }
 
