@@ -19,6 +19,7 @@ public class QLearningBot extends Bot {
 
     private double nearestEnemyDistance = Double.MAX_VALUE;
     private double nearestEnemyX, nearestEnemyY;
+    private int ticksSinceLastScan = 0;
 
     private final Map<Integer, GameStateActionPair> activeBullets = new HashMap<>();
     private double epsilon = 0.7;
@@ -53,22 +54,22 @@ public class QLearningBot extends Bot {
         setBulletColor(new Color(0x00, 0x88, 0xFF)); // light blue
 
         while (isRunning()) {
-            if (getTurnNumber() % 20 == 0) {
-                turnGunRight(360);
-            }
+            ticksSinceLastScan++;
+            scan();
+
             double dx = nearestEnemyX - getX();
             double dy = nearestEnemyY - getY();
             double distance = Math.hypot(dx, dy);
 
             double angleToEnemy = Math.toDegrees(Math.atan2(dy, dx));  // absolutny kąt względem osi X
-            double myHeading = getDirection();                          // absolutny kierunek bota (0 = północ)
+            double gunHeading = getGunDirection();
+            double gunBearing = normalizeRelativeAngle(angleToEnemy - gunHeading);  // względny kąt
 
-            double bearing = normalizeRelativeAngle(angleToEnemy - myHeading);  // względny kąt
-
-            currentState = classifier.observeGameState(distance, bearing);
+            currentState = classifier.observeGameState(distance, gunBearing, ticksSinceLastScan);
             currentAction = selectAction(currentState);
             executeAction(currentAction);
-            go(); // Execute all queued actions
+            go();
+
 
             // Update Q-table
             if (previousState != null && previousAction != null) {
@@ -82,8 +83,36 @@ public class QLearningBot extends Bot {
         }
     }
 
+    private void scan() {
+        if (ticksSinceLastScan > 20) {
+            turnGunRight(180); // Emergency scan if target is lost too long
+        }
+        else if (ticksSinceLastScan > 2) {
+            if (nearestEnemyDistance != Double.MAX_VALUE && ticksSinceLastScan < 8) {
+                double enemyBearing = Math.toDegrees(Math.atan2(
+                        nearestEnemyY - getY(),
+                        nearestEnemyX - getX()
+                ));
+
+                double gunTurn = normalizeRelativeAngle(enemyBearing - getGunDirection());
+                turnGunRight(gunTurn);
+            } else {
+                if (ticksSinceLastScan % 4 == 0) {
+                    turnGunRight(90);
+                } else {
+                    turnGunRight(30);
+                }
+            }
+        }
+    }
+
     private double getReward() {
         double reward = currentReward == 0.0 ? -0.001 : currentReward;
+        if (ticksSinceLastScan <= 1) {
+            reward += 0.005;
+        } else if (ticksSinceLastScan > 8) {
+            reward -= 0.02;
+        }
         cumulativeReward += reward;
         currentReward = 0.0; // Reset reward for the next round
         return reward;
@@ -101,6 +130,15 @@ public class QLearningBot extends Bot {
             nearestEnemyX = e.getX();
             nearestEnemyY = e.getY();
         }
+
+        double enemyBearing = Math.toDegrees(Math.atan2(
+                nearestEnemyY - getY(),
+                nearestEnemyX - getX()
+        ));
+        double gunTurn = normalizeRelativeAngle(enemyBearing - getGunDirection());
+        setTurnGunRight(gunTurn);
+
+        ticksSinceLastScan = 0;
     }
 
     @Override
@@ -150,7 +188,7 @@ public class QLearningBot extends Bot {
     public void onRoundEnded(RoundEndedEvent e) {
 //        System.out.println("Round ended: " + e.getResults().getFirstPlaces());
         boolean won = e.getResults().getFirstPlaces() > 0;
-        logger.log(getRoundNumber(), epsilon, cumulativeReward, won, ((QLearningKnowledgeBase) knowledgeBase).getQTableSize());
+        logger.log(getRoundNumber(), epsilon, cumulativeReward, won, knowledgeBase.getQTableSize());
         cumulativeReward = 0.0;
         activeBullets.clear();
         if (e.getRoundNumber() % 10 == 0) {
@@ -191,6 +229,8 @@ public class QLearningBot extends Bot {
             case TURN_LEFT -> turnLeft(10);
             case TURN_RIGHT -> turnRight(10);
             case FIRE_MEDIUM -> fire(1.0);
+            case NOTHING -> {
+            } // Do nothing
         }
     }
 }
