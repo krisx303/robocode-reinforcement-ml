@@ -8,10 +8,15 @@ public enum Action {
     TURN_LEFT,
     TURN_RIGHT,
     FIRE_MEDIUM,
-    NOTHING;
+    NOTHING,
+    TURN_TO_POINT_ENEMY;
 
     public static Action random() {
         Action[] values = values();
         return values[new Random().nextInt(values.length)];
+    }
+
+    public boolean isFireAction() {
+        return this == FIRE_MEDIUM;
     }
 }
