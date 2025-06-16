@@ -8,7 +8,7 @@ public enum Action {
     TURN_LEFT,
     TURN_RIGHT,
     FIRE_MEDIUM,
-    NOTHING,
+    FIRE_STRONG,
     TURN_TO_POINT_ENEMY;
 
     public static Action random() {

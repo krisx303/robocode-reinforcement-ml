@@ -20,6 +20,7 @@ public class TrainingLogger {
     public void log(int round, double epsilon, double cumulativeReward, boolean won, int qTableSize) {
         try {
             writer.write(round + "," + epsilon + "," + cumulativeReward + "," + (won ? 1 : 0) + "," + qTableSize + "\n");
+            writer.flush();
         } catch (IOException e) {
             System.err.println("Failed to log training data: " + e.getMessage());
         }

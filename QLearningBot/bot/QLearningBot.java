@@ -10,10 +10,7 @@ import dev.robocode.tankroyale.botapi.events.WonRoundEvent;
 import dev.robocode.tankroyale.botapi.Bot;
 
 import java.awt.Color;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class QLearningBot extends Bot {
 
@@ -30,6 +27,9 @@ public class QLearningBot extends Bot {
     private int scanTurn = -1;
     private final TrainingLogger logger = new TrainingLogger("training_data.csv");
     private Double[] roundResults;
+    private final Deque<GameStateActionPair> episodeHistory = new LinkedList<>();
+    private static final int MAX_HISTORY_SIZE = 300;
+    private boolean wonCurrentRound = false;
 
     public static void main(String[] args) {
         new QLearningBot().start();
@@ -75,8 +75,14 @@ public class QLearningBot extends Bot {
 
             currentState = classifier.observeGameState(distance, bearing, scanAge);
             currentAction = selectAction(currentState);
+
             executeAction(currentAction, bearing);
             go();
+            episodeHistory.addLast(new GameStateActionPair(currentState, currentAction));
+            if (episodeHistory.size() > MAX_HISTORY_SIZE) {
+                episodeHistory.removeFirst();
+            }
+
 
             // Update Q-table
             if (previousState != null && previousAction != null) {
@@ -146,19 +152,40 @@ public class QLearningBot extends Bot {
     }
 
     @Override
+    public void onWonRound(WonRoundEvent e) {
+        super.onWonRound(e);
+        wonCurrentRound = true;
+    }
+
+    @Override
     public void onRoundEnded(RoundEndedEvent e) {
         scanTurn = -1;
         activeBullets.clear();
-        boolean won = e.getResults().getFirstPlaces() == getMyId();
-        if (won) {
-            roundResults[getRoundNumber()] += 20;
-        }
-        logger.log(getRoundNumber(), epsilon, roundResults[getRoundNumber()], won, knowledgeBase.getQTableSize());
 
-        if (e.getRoundNumber() % 10 == 0) {
+        int roundNumber = e.getRoundNumber();
+        boolean won = wonCurrentRound;
+
+        double finalReward = won ? 20.0 : 0.0;
+        roundResults[roundNumber] += finalReward;
+
+        if (!episodeHistory.isEmpty() && finalReward > 0.0) {
+            double rewardPerStep = finalReward / episodeHistory.size();
+
+            for (GameStateActionPair pair : episodeHistory) {
+                knowledgeBase.updateKnowledge(pair.state(), pair.action(), currentState, rewardPerStep);
+            }
+        }
+
+        logger.log(roundNumber, epsilon, roundResults[roundNumber], won, knowledgeBase.getQTableSize());
+
+        if (roundNumber % 10 == 0) {
             knowledgeBase.saveQTable();
         }
+
+        episodeHistory.clear();
+        wonCurrentRound = false;
     }
+
 
     private Action selectAction(GameState state) {
         boolean isExploring = random.nextDouble() < epsilon;
@@ -179,8 +206,8 @@ public class QLearningBot extends Bot {
             case TURN_LEFT -> turnLeft(10);
             case TURN_RIGHT -> turnRight(10);
             case FIRE_MEDIUM -> fire(1.0);
+            case FIRE_STRONG -> fire(3.0);
             case TURN_TO_POINT_ENEMY -> turnLeft(bearing);
-            case NOTHING -> {}
         }
     }
 }
